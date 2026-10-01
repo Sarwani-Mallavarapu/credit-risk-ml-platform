@@ -7,4 +7,7 @@ __pycache__/
 .env
 data/
 notebooks/
+.pytest_cache/
 tests/
+*.log
+.github/
