@@ -2,12 +2,12 @@ import joblib
 import pandas as pd
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from src.features.engineering import engineer_features
 from src.config import CONFIG_PATH, MODEL_PATH
 from src.database.connection import execute_query
-from src.features.engineering import engineer_features
-
+from src.services.prediction_service import generate_prediction
 # --------------------------------------------------
 # Load model and configuration
 # --------------------------------------------------
@@ -30,39 +30,37 @@ app = FastAPI(
 # --------------------------------------------------
 # Request schema
 # --------------------------------------------------
-
 class ApplicantRequest(BaseModel):
-    credit_limit: float
+    credit_limit: float = Field(ge=0)
     gender: int
     education: int
     marital_status: int
-    age: int
-    applicant_id: str
+    age: int = Field(ge=18)
+    applicant_id: str = Field(min_length=1)
 
-    repay_sep: int
-    repay_aug: int
-    repay_jul: int
-    repay_jun: int
-    repay_may: int
-    repay_apr: int
+    repay_sep: int = Field(ge=0)
+    repay_aug: int = Field(ge=0)
+    repay_jul: int = Field(ge=0)
+    repay_jun: int = Field(ge=0)
+    repay_may: int = Field(ge=0)
+    repay_apr: int = Field(ge=0)
 
-    bill_sep: float
-    bill_aug: float
-    bill_jul: float
-    bill_jun: float
-    bill_may: float
-    bill_apr: float
+    bill_sep: float = Field(ge=0)
+    bill_aug: float = Field(ge=0)
+    bill_jul: float = Field(ge=0)
+    bill_jun: float = Field(ge=0)
+    bill_may: float = Field(ge=0)
+    bill_apr: float = Field(ge=0)
 
-    payment_sep: float
-    payment_aug: float
-    payment_jul: float
-    payment_jun: float
-    payment_may: float
-    payment_apr: float
+    payment_sep: float = Field(ge=0)
+    payment_aug: float = Field(ge=0)
+    payment_jul: float = Field(ge=0)
+    payment_jun: float = Field(ge=0)
+    payment_may: float = Field(ge=0)
+    payment_apr: float = Field(ge=0)
 
 class BatchApplicantRequest(BaseModel):
     applicants: list[ApplicantRequest]
-
 
 # --------------------------------------------------
 # Risk-band logic
@@ -112,60 +110,11 @@ def predict(applicant: ApplicantRequest):
 
     applicant_data = applicant.model_dump()
 
-    input_df = pd.DataFrame([applicant_data])
-
-    input_df = engineer_features(input_df)
-
-    # Model prediction
-    default_probability = model.predict_proba(
-        input_df
-    )[:, 1][0]
-
-    candidate_threshold = model_config["candidate_threshold"]
-
-    predicted_default = (
-        default_probability >= candidate_threshold
+    return generate_prediction(
+        applicant_data,
+        model,
+        model_config
     )
-
-    risk_band = get_risk_band(default_probability)
-
-    save_query = """
-    INSERT INTO predictions (
-        applicant_id,
-        default_probability,
-        predicted_default,
-        risk_band,
-        model_version
-    )
-    VALUES (%s, %s, %s, %s, %s)
-    """
-
-    execute_query(
-        save_query,
-        (
-            applicant_data["applicant_id"],
-            float(default_probability),
-            bool(predicted_default),
-            risk_band,
-            model_config["model_version"]
-        )
-    )
-
-    print(
-        f"Prediction saved for applicant: "
-        f"{applicant_data['applicant_id']}"
-    )
-    
-    return {
-    "applicant_id": applicant_data["applicant_id"],
-    "default_probability": round(
-        float(default_probability),
-        4
-    ),
-    "predicted_default": bool(predicted_default),
-    "risk_band": risk_band,
-    "model_version": model_config["model_version"]
-}
 
 
 @app.get("/predictions/{applicant_id}")
@@ -204,49 +153,19 @@ def get_prediction(applicant_id: str):
 
 @app.post("/predict/batch")
 def predict_batch(batch: BatchApplicantRequest):
+
     results = []
 
     for applicant in batch.applicants:
         applicant_data = applicant.model_dump()
 
-        input_df = pd.DataFrame([applicant_data])
-        input_df = engineer_features(input_df)
-
-        default_probability = model.predict_proba(input_df)[:, 1][0]
-
-        candidate_threshold = model_config["candidate_threshold"]
-        predicted_default = default_probability >= candidate_threshold
-        risk_band = get_risk_band(default_probability)
-
-        save_query = """
-            INSERT INTO predictions (
-                applicant_id,
-                default_probability,
-                predicted_default,
-                risk_band,
-                model_version
-            )
-            VALUES (%s, %s, %s, %s, %s)
-        """
-
-        execute_query(
-            save_query,
-            (
-                applicant_data["applicant_id"],
-                float(default_probability),
-                bool(predicted_default),
-                risk_band,
-                model_config["model_version"]
-            )
+        prediction = generate_prediction(
+            applicant_data,
+            model,
+            model_config
         )
 
-        results.append({
-            "applicant_id": applicant_data["applicant_id"],
-            "default_probability": round(float(default_probability), 4),
-            "predicted_default": bool(predicted_default),
-            "risk_band": risk_band,
-            "model_version": model_config["model_version"]
-        })
+        results.append(prediction)
 
     return {
         "count": len(results),

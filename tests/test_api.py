@@ -65,7 +65,7 @@ def test_prediction():
         "payment_apr": 5000
     }
 
-    with patch("src.api.main.execute_query") as mock_execute_query:
+    with patch("src.services.prediction_service.execute_query") as mock_execute_query:
         response = client.post("/predict", json=payload)
 
     assert response.status_code == 200
@@ -141,7 +141,7 @@ def test_batch_prediction():
         ]
     }
 
-    with patch("src.api.main.execute_query") as mock_execute_query:
+    with patch("src.services.prediction_service.execute_query") as mock_execute_query:
         response = client.post("/predict/batch", json=payload)
 
     assert response.status_code == 200
@@ -160,3 +160,101 @@ def test_batch_prediction():
         assert "model_version" in prediction
 
     assert mock_execute_query.call_count == 2
+
+def test_prediction_rejects_negative_credit_limit():
+    payload = {
+        "applicant_id": "INVALID-001",
+        "credit_limit": -50000,
+        "gender": 2,
+        "education": 2,
+        "marital_status": 1,
+        "age": 35,
+        "repay_sep": 0,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post("/predict", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_prediction_rejects_invalid_age():
+    payload = {
+        "applicant_id": "INVALID-002",
+        "credit_limit": 50000,
+        "gender": 2,
+        "education": 2,
+        "marital_status": 1,
+        "age": 15,
+        "repay_sep": 0,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post("/predict", json=payload)
+
+    assert response.status_code == 422
+
+
+def test_prediction_rejects_blank_applicant_id():
+    payload = {
+        "applicant_id": "",
+        "credit_limit": 50000,
+        "gender": 2,
+        "education": 2,
+        "marital_status": 1,
+        "age": 35,
+        "repay_sep": 0,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post("/predict", json=payload)
+
+    assert response.status_code == 422
