@@ -1,4 +1,4 @@
-name: CI
+name: Credit Risk ML Platform CI
 
 on:
   push:
@@ -11,6 +11,24 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: credit_risk
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd="pg_isready -U postgres -d credit_risk"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout repository
@@ -26,5 +44,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Wait for PostgreSQL
+        run: |
+          python - <<'PY'
+          import socket
+          import time
+
+          host = "localhost"
+          port = 5432
+
+          for _ in range(30):
+              try:
+                  with socket.create_connection((host, port), timeout=2):
+                      print("PostgreSQL is ready.")
+                      break
+              except OSError:
+                  print("Waiting for PostgreSQL...")
+                  time.sleep(2)
+          else:
+              raise RuntimeError("PostgreSQL did not become available.")
+          PY
+
       - name: Run tests
-        run: pytest
+        run: |
+          pytest -v
