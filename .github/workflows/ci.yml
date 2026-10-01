@@ -12,6 +12,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: credit_risk
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
     services:
       postgres:
         image: postgres:18
