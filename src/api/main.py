@@ -10,6 +10,17 @@ from src.features.engineering import engineer_features
 from src.config import CONFIG_PATH, MODEL_PATH
 from src.database.connection import execute_query, DatabaseError
 from src.services.prediction_service import generate_prediction
+
+import logging
+import time
+
+from src.logging_config import configure_logging
+
+configure_logging()
+
+logger = logging.getLogger(__name__)
+
+
 # --------------------------------------------------
 # Load model and configuration
 # --------------------------------------------------
@@ -182,3 +193,21 @@ def database_exception_handler(request, exc):
             "detail": "Database operation failed."
         },
     )
+
+@app.middleware("http")
+async def log_requests(request, call_next):
+    start_time = time.perf_counter()
+
+    response = await call_next(request)
+
+    duration_ms = (time.perf_counter() - start_time) * 1000
+
+    logger.info(
+        "HTTP request method=%s path=%s status_code=%s duration_ms=%.2f",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+
+    return response

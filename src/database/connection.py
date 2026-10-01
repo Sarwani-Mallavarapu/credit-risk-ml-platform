@@ -1,6 +1,8 @@
 import os
-
+import logging
 import psycopg2
+
+logger = logging.getLogger(__name__)
 
 class DatabaseError(Exception):
     """Raised when a database operation fails."""
@@ -21,7 +23,7 @@ def execute_query(query, params=None, fetch=False):
     try:
         with connection.cursor() as cursor:
             cursor.execute(query, params)
-
+            logger.info("Database query executed successfully")
             if fetch:
                 return cursor.fetchall()
 
@@ -29,6 +31,7 @@ def execute_query(query, params=None, fetch=False):
             return None
 
     except psycopg2.Error as error:
+        logger.error("Database operation failed", exc_info=True)
         connection.rollback()
         raise  DatabaseError("Database operation failed.") from error
 

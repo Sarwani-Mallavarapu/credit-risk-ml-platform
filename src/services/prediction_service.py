@@ -6,6 +6,8 @@ from src.features.engineering import engineer_features
 import logging
 logger = logging.getLogger(__name__)
 
+import time
+
 
 def get_risk_band(default_probability: float) -> str:
     if default_probability < 0.30:
@@ -22,6 +24,7 @@ def generate_prediction(
     model_config: dict
 ) -> dict:
 
+    start_time = time.perf_counter()
     input_df = pd.DataFrame([applicant_data])
 
     input_df = engineer_features(input_df)
@@ -69,6 +72,8 @@ def generate_prediction(
         float(default_probability),
     )
 
+    duration_ms = (time.perf_counter() - start_time) * 1000
+
     return {
         "applicant_id": applicant_data["applicant_id"],
         "default_probability": round(
@@ -77,5 +82,6 @@ def generate_prediction(
         ),
         "predicted_default": bool(predicted_default),
         "risk_band": risk_band,
-        "model_version": model_config["model_version"]
+        "model_version": model_config["model_version"],
+        "prediction_duration_ms": duration_ms
     }
