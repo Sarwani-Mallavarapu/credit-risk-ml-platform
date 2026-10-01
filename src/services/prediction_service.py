@@ -3,6 +3,9 @@ import pandas as pd
 from src.database.connection import execute_query
 from src.features.engineering import engineer_features
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def get_risk_band(default_probability: float) -> str:
     if default_probability < 0.30:
@@ -55,6 +58,15 @@ def generate_prediction(
             risk_band,
             model_config["model_version"]
         )
+    )
+
+    logger.info(
+        "Prediction generated for applicant=%s model_version=%s "
+        "risk_band=%s probability=%.4f",
+        applicant_data["applicant_id"],
+        model_config["model_version"],
+        risk_band,
+        float(default_probability),
     )
 
     return {

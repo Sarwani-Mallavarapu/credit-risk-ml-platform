@@ -1,12 +1,14 @@
+from fastapi.responses import JSONResponse
 import joblib
 import pandas as pd
 
+from fastapi.responses import JSONResponse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from src.features.engineering import engineer_features
 from src.config import CONFIG_PATH, MODEL_PATH
-from src.database.connection import execute_query
+from src.database.connection import execute_query, DatabaseError
 from src.services.prediction_service import generate_prediction
 # --------------------------------------------------
 # Load model and configuration
@@ -171,3 +173,12 @@ def predict_batch(batch: BatchApplicantRequest):
         "count": len(results),
         "predictions": results
     }
+
+@app.exception_handler(DatabaseError)
+def database_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Database operation failed."
+        },
+    )

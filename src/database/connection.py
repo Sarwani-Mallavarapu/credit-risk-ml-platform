@@ -1,6 +1,9 @@
 import os
+
 import psycopg2
 
+class DatabaseError(Exception):
+    """Raised when a database operation fails."""
 
 def get_connection():
     return psycopg2.connect(
@@ -24,6 +27,10 @@ def execute_query(query, params=None, fetch=False):
 
             connection.commit()
             return None
+
+    except psycopg2.Error as error:
+        connection.rollback()
+        raise  DatabaseError("Database operation failed.") from error
 
     finally:
         connection.close()
