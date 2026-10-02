@@ -300,3 +300,42 @@ def test_database_error():
     assert response.json() == {
         "detail": "Database operation failed."
     }
+
+
+def test_monitoring_trend():
+    response = client.get(
+        "/monitoring/trend?days=7"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert isinstance(data, list)
+
+    for item in data:
+        assert "date" in item
+        assert "total_predictions" in item
+        assert "predicted_defaults" in item
+        assert "predicted_default_rate" in item
+        assert "average_probability" in item
+
+
+def test_monitoring_summary():
+    response = client.get(
+        "/monitoring/summary"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "total_predictions" in data
+    assert "predicted_defaults" in data
+    assert "predicted_default_rate" in data
+    assert "average_probability" in data
+    assert "risk_distribution" in data
+
+    assert "LOW" in data["risk_distribution"]
+    assert "MEDIUM" in data["risk_distribution"]
+    assert "HIGH" in data["risk_distribution"]

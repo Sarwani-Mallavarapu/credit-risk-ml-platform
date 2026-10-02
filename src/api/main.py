@@ -10,6 +10,15 @@ from src.features.engineering import engineer_features
 from src.config import CONFIG_PATH, MODEL_PATH
 from src.database.connection import execute_query, DatabaseError
 from src.services.prediction_service import generate_prediction
+# from src.services.monitoring_service import get_prediction_summary
+
+
+from src.services.monitoring_service import (
+    get_prediction_summary,
+    get_prediction_trend,
+    get_prediction_summary_by_period,
+)
+
 
 import logging
 import time
@@ -211,3 +220,15 @@ async def log_requests(request, call_next):
     )
 
     return response
+
+@app.get("/monitoring/summary")
+def monitoring_summary():
+    return get_prediction_summary()
+
+@app.get("/monitoring/summary/period")
+def monitoring_summary_period(days: int = 7):
+    return get_prediction_summary_by_period(days)
+
+@app.get("/monitoring/trend")
+def monitoring_trend(days: int = 7):
+    return get_prediction_trend(days)
