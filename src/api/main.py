@@ -20,6 +20,9 @@ from src.services.monitoring_service import (
     get_prediction_summary_by_period,
 )
 
+from src.services.performance_monitoring_service import (
+    get_model_performance,
+)
 
 import logging
 import time
@@ -84,6 +87,9 @@ class ApplicantRequest(BaseModel):
 
 class BatchApplicantRequest(BaseModel):
     applicants: list[ApplicantRequest]
+
+class OutcomeRequest(BaseModel):
+    actual_default: bool
 
 # --------------------------------------------------
 # Risk-band logic
@@ -237,3 +243,56 @@ def monitoring_trend(days: int = 7):
 @app.get("/monitoring/drift")
 def monitoring_drift(days: int = 7):
     return get_feature_drift(days)
+
+
+@app.get("/predictions/{applicant_id}")
+@app.patch("/predictions/{applicant_id}/outcome")
+def update_prediction_outcome(
+    applicant_id: str,
+    outcome: OutcomeRequest
+):
+    query = """
+        UPDATE predictions
+        SET actual_default = %s
+        WHERE applicant_id = %s
+    """
+
+    execute_query(
+        query,
+        (
+            outcome.actual_default,
+            applicant_id
+        )
+    )
+
+    check_query = """
+        SELECT COUNT(*)
+        FROM predictions
+        WHERE applicant_id = %s
+    """
+
+    result = execute_query(
+        check_query,
+        (applicant_id,),
+        fetch=True
+    )
+
+    if result[0][0] == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Applicant prediction not found."
+        )
+
+    return {
+        "applicant_id": applicant_id,
+        "actual_default": outcome.actual_default,
+        "message": "Actual outcome updated successfully."
+    }
+
+@app.get("/monitoring/drift")
+def monitoring_drift(days: int = 7):
+    return get_feature_drift(days)
+
+@app.get("/monitoring/performance")
+def monitoring_performance():
+    return get_model_performance()

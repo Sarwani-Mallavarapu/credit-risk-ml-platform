@@ -5,6 +5,9 @@ from fastapi.testclient import TestClient
 from src.api.main import app
 from src.database.connection import DatabaseError
 
+from src.services.performance_monitoring_service import (
+    get_model_performance,
+)
 
 client = TestClient(app)
 
@@ -358,3 +361,81 @@ def test_monitoring_drift_insufficient_data():
     assert data["minimum_required"] == 30
     assert data["sample_size"] < 30
     assert data["features"] == []
+
+def test_update_prediction_outcome():
+    applicant_id = "DB-TEST-001"
+
+    response = client.patch(
+        f"/predictions/{applicant_id}/outcome",
+        json={
+            "actual_default": True
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["applicant_id"] == applicant_id
+    assert data["actual_default"] is True
+    assert data["message"] == "Actual outcome updated successfully."
+
+
+def test_update_prediction_outcome_unknown_applicant():
+    response = client.patch(
+        "/predictions/UNKNOWN-OUTCOME-001/outcome",
+        json={
+            "actual_default": False
+        }
+    )
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["detail"] == "Applicant prediction not found."
+
+@app.get("/monitoring/performance")
+def monitoring_performance():
+    return get_model_performance()
+
+def test_monitoring_performance():
+    response = client.get(
+        "/monitoring/performance"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "total_labeled_predictions" in data
+    assert "pending_outcomes" in data
+    assert "confusion_matrix" in data
+    assert "metrics" in data
+
+    assert data["total_labeled_predictions"] >= 1
+
+    assert "true_positive" in data["confusion_matrix"]
+    assert "true_negative" in data["confusion_matrix"]
+    assert "false_positive" in data["confusion_matrix"]
+    assert "false_negative" in data["confusion_matrix"]
+
+    assert "accuracy" in data["metrics"]
+    assert "precision" in data["metrics"]
+    assert "recall" in data["metrics"]
+    assert "f1" in data["metrics"]
+    assert "metrics" in data
+    assert data["status"] == "INSUFFICIENT_DATA"
+    assert data["minimum_required"] == 30
+
+
+def test_monitoring_performance_counts_false_negative():
+    response = client.get(
+        "/monitoring/performance"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["confusion_matrix"]["false_negative"] >= 1

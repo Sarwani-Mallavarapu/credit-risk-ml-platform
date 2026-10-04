@@ -16,9 +16,6 @@ CREATE TABLE IF NOT EXISTS predictions (
     risk_band VARCHAR(20) NOT NULL,
     model_version VARCHAR(50) NOT NULL,
     input_features JSONB,
+    actual_default BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-
-ALTER TABLE predictions
-ADD COLUMN input_features JSONB;
