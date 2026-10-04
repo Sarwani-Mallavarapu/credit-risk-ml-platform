@@ -7,6 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import time
+import json
 
 
 def get_risk_band(default_probability: float) -> str:
@@ -42,14 +43,15 @@ def generate_prediction(
     risk_band = get_risk_band(default_probability)
 
     save_query = """
-        INSERT INTO predictions (
-            applicant_id,
-            default_probability,
-            predicted_default,
-            risk_band,
-            model_version
-        )
-        VALUES (%s, %s, %s, %s, %s)
+    INSERT INTO predictions (
+        applicant_id,
+        default_probability,
+        predicted_default,
+        risk_band,
+        model_version,
+        input_features
+    )
+    VALUES (%s, %s, %s, %s, %s, %s)
     """
 
     execute_query(
@@ -59,7 +61,8 @@ def generate_prediction(
             float(default_probability),
             bool(predicted_default),
             risk_band,
-            model_config["model_version"]
+            model_config["model_version"],
+            json.dumps(applicant_data)
         )
     )
 

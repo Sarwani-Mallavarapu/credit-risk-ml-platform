@@ -339,3 +339,22 @@ def test_monitoring_summary():
     assert "LOW" in data["risk_distribution"]
     assert "MEDIUM" in data["risk_distribution"]
     assert "HIGH" in data["risk_distribution"]
+
+def test_monitoring_drift_insufficient_data():
+    response = client.get(
+        "/monitoring/drift?days=7"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "sample_size" in data
+    assert "status" in data
+    assert "minimum_required" in data
+    assert "features" in data
+
+    assert data["status"] == "INSUFFICIENT_DATA"
+    assert data["minimum_required"] == 30
+    assert data["sample_size"] < 30
+    assert data["features"] == []

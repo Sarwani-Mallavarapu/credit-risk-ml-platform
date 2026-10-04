@@ -14,6 +14,7 @@ from src.services.prediction_service import generate_prediction
 
 
 from src.services.monitoring_service import (
+    get_feature_drift,
     get_prediction_summary,
     get_prediction_trend,
     get_prediction_summary_by_period,
@@ -232,3 +233,7 @@ def monitoring_summary_period(days: int = 7):
 @app.get("/monitoring/trend")
 def monitoring_trend(days: int = 7):
     return get_prediction_trend(days)
+
+@app.get("/monitoring/drift")
+def monitoring_drift(days: int = 7):
+    return get_feature_drift(days)
