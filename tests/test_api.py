@@ -362,8 +362,46 @@ def test_monitoring_drift_insufficient_data():
     assert data["sample_size"] < 30
     assert data["features"] == []
 
+def create_test_prediction(applicant_id):
+    payload = {
+        "applicant_id": applicant_id,
+        "credit_limit": 50000,
+        "gender": 2,
+        "education": 2,
+        "marital_status": 1,
+        "age": 35,
+        "repay_sep": 0,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post(
+        "/predict",
+        json=payload
+    )
+
+    assert response.status_code == 200
+    return response.json()
+
 def test_update_prediction_outcome():
-    applicant_id = "DB-TEST-001"
+    applicant_id = "OUTCOME-TEST-001"
+
+    create_test_prediction(applicant_id)
 
     response = client.patch(
         f"/predictions/{applicant_id}/outcome",
@@ -379,7 +417,6 @@ def test_update_prediction_outcome():
     assert data["applicant_id"] == applicant_id
     assert data["actual_default"] is True
     assert data["message"] == "Actual outcome updated successfully."
-
 
 def test_update_prediction_outcome_unknown_applicant():
     response = client.patch(
@@ -400,6 +437,19 @@ def monitoring_performance():
     return get_model_performance()
 
 def test_monitoring_performance():
+    applicant_id = "PERFORMANCE-TEST-001"
+
+    create_test_prediction(applicant_id)
+
+    outcome_response = client.patch(
+        f"/predictions/{applicant_id}/outcome",
+        json={
+            "actual_default": True
+        }
+    )
+
+    assert outcome_response.status_code == 200
+
     response = client.get(
         "/monitoring/performance"
     )
@@ -424,12 +474,24 @@ def test_monitoring_performance():
     assert "precision" in data["metrics"]
     assert "recall" in data["metrics"]
     assert "f1" in data["metrics"]
-    assert "metrics" in data
+
     assert data["status"] == "INSUFFICIENT_DATA"
     assert data["minimum_required"] == 30
 
-
 def test_monitoring_performance_counts_false_negative():
+    applicant_id = "FALSE-NEGATIVE-TEST-001"
+
+    create_test_prediction(applicant_id)
+
+    outcome_response = client.patch(
+        f"/predictions/{applicant_id}/outcome",
+        json={
+            "actual_default": True
+        }
+    )
+
+    assert outcome_response.status_code == 200
+
     response = client.get(
         "/monitoring/performance"
     )
