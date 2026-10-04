@@ -5,6 +5,20 @@ import pandas as pd
 from src.database.connection import execute_query
 
 
+
+import json
+import math
+
+import pandas as pd
+
+from src.database.connection import execute_query
+
+
+REFERENCE_PROFILE_PATH = (
+    "data/reference_feature_profile.json"
+)
+
+
 FEATURE_MAPPING = {
     "X1": "credit_limit",
     "X2": "gender",
@@ -34,44 +48,27 @@ FEATURE_MAPPING = {
     "X23": "payment_apr",
 }
 
-def calculate_psi(reference, current, bins=10):
-    reference = pd.Series(reference).dropna()
-    current = pd.Series(current).dropna()
 
-    if len(reference) == 0 or len(current) == 0:
-        return 0.0
-
-    breakpoints = reference.quantile(
-        [i / bins for i in range(bins + 1)]
-    ).unique()
-
-    if len(breakpoints) < 2:
-        return 0.0
-
-    reference_bins = pd.cut(
-        reference,
-        bins=breakpoints,
-        include_lowest=True
+def calculate_psi(reference_distribution, current_distribution):
+    reference_distribution = pd.Series(
+        reference_distribution,
+        dtype=float
     )
 
-    current_bins = pd.cut(
-        current,
-        bins=breakpoints,
-        include_lowest=True
+    current_distribution = pd.Series(
+        current_distribution,
+        dtype=float
     )
 
-    reference_distribution = (
-        reference_bins.value_counts(normalize=True)
-        .sort_index()
+    reference_distribution = reference_distribution.replace(
+        0,
+        0.0001
     )
 
-    current_distribution = (
-        current_bins.value_counts(normalize=True)
-        .sort_index()
+    current_distribution = current_distribution.replace(
+        0,
+        0.0001
     )
-
-    reference_distribution = reference_distribution.replace(0, 0.0001)
-    current_distribution = current_distribution.replace(0, 0.0001)
 
     psi = (
         (
@@ -81,17 +78,20 @@ def calculate_psi(reference, current, bins=10):
         * (
             current_distribution
             / reference_distribution
-        ).apply(lambda x: __import__("math").log(x))
+        ).apply(math.log)
     ).sum()
 
     return float(psi)
 
-def get_feature_drift(days: int = 7) -> dict:
-    reference_path = (
-        "data/processed/credit_card_default_cleaned.csv"
-    )
 
-    reference_df = pd.read_csv(reference_path)
+def get_feature_drift(days: int = 7) -> dict:
+
+    with open(
+        REFERENCE_PROFILE_PATH,
+        "r",
+        encoding="utf-8"
+    ) as file:
+        reference_profile = json.load(file)
 
     query = """
         SELECT input_features
@@ -131,9 +131,29 @@ def get_feature_drift(days: int = 7) -> dict:
         if api_feature not in current_df.columns:
             continue
 
+        profile = reference_profile[reference_feature]
+
+        bin_edges = profile["bin_edges"]
+        reference_distribution = profile["distribution"]
+
+        current_bins = pd.cut(
+            current_df[api_feature],
+            bins=bin_edges,
+            include_lowest=True
+        )
+
+        current_distribution = (
+            current_bins
+            .value_counts(
+                normalize=True,
+                sort=False
+            )
+            .tolist()
+        )
+
         psi = calculate_psi(
-            reference_df[reference_feature],
-            current_df[api_feature]
+            reference_distribution,
+            current_distribution
         )
 
         if psi < 0.10:
