@@ -58,18 +58,18 @@ app = FastAPI(
 # --------------------------------------------------
 class ApplicantRequest(BaseModel):
     credit_limit: float = Field(ge=0)
-    gender: int
-    education: int
-    marital_status: int
-    age: int = Field(ge=18)
+    gender: int = Field(ge=1, le=2)
+    education: int = Field(ge=0, le=6)
+    marital_status: int = Field(ge=0, le=3)
+    age: int = Field(ge=18, le=100)
     applicant_id: str = Field(min_length=1)
 
-    repay_sep: int = Field(ge=0)
-    repay_aug: int = Field(ge=0)
-    repay_jul: int = Field(ge=0)
-    repay_jun: int = Field(ge=0)
-    repay_may: int = Field(ge=0)
-    repay_apr: int = Field(ge=0)
+    repay_sep: int = Field(ge=-2, le=8)
+    repay_aug: int = Field(ge=-2, le=8)
+    repay_jul: int = Field(ge=-2, le=8)
+    repay_jun: int = Field(ge=-2, le=8)
+    repay_may: int = Field(ge=-2, le=8)
+    repay_apr: int = Field(ge=-2, le=8)
 
     bill_sep: float = Field(ge=0)
     bill_aug: float = Field(ge=0)
@@ -296,3 +296,32 @@ def monitoring_drift(days: int = 7):
 @app.get("/monitoring/performance")
 def monitoring_performance():
     return get_model_performance()
+
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "model_version": model_config["model_version"]
+    }
+
+
+@app.get("/ready")
+def readiness_check():
+    try:
+        execute_query(
+            "SELECT 1",
+            fetch=True
+        )
+
+        return {
+            "status": "ready",
+            "model_version": model_config["model_version"],
+            "database": "ready"
+        }
+
+    except DatabaseError:
+        raise HTTPException(
+            status_code=503,
+            detail="Service is not ready."
+        )

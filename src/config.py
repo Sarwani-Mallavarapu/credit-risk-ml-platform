@@ -14,9 +14,13 @@ CONFIG_PATH = MODEL_DIR / "model_config.joblib"
 
 load_dotenv()
 
-
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "credit_risk")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
+
+if not DB_PASSWORD:
+    raise RuntimeError(
+        "DB_PASSWORD environment variable is not set."
+    )

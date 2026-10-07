@@ -501,3 +501,74 @@ def test_monitoring_performance_counts_false_negative():
     data = response.json()
 
     assert data["confusion_matrix"]["false_negative"] >= 1
+
+def test_prediction_rejects_invalid_gender():
+    payload = {
+        "applicant_id": "INVALID-GENDER",
+        "credit_limit": 50000,
+        "gender": 3,
+        "education": 2,
+        "marital_status": 1,
+        "age": 35,
+        "repay_sep": 0,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post(
+        "/predict",
+        json=payload
+    )
+
+    assert response.status_code == 422
+
+
+def test_prediction_rejects_invalid_repayment_status():
+    payload = {
+        "applicant_id": "INVALID-REPAYMENT",
+        "credit_limit": 50000,
+        "gender": 2,
+        "education": 2,
+        "marital_status": 1,
+        "age": 35,
+        "repay_sep": 9,
+        "repay_aug": 0,
+        "repay_jul": 0,
+        "repay_jun": 0,
+        "repay_may": 0,
+        "repay_apr": 0,
+        "bill_sep": 40000,
+        "bill_aug": 38000,
+        "bill_jul": 35000,
+        "bill_jun": 30000,
+        "bill_may": 28000,
+        "bill_apr": 25000,
+        "payment_sep": 5000,
+        "payment_aug": 5000,
+        "payment_jul": 5000,
+        "payment_jun": 5000,
+        "payment_may": 5000,
+        "payment_apr": 5000
+    }
+
+    response = client.post(
+        "/predict",
+        json=payload
+    )
+
+    assert response.status_code == 422
