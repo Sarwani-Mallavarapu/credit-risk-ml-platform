@@ -5,7 +5,9 @@ __pycache__/
 .git/
 .gitignore
 .env
-data/
+data/raw/*
+data/processed/*
+!data/reference_feature_profile.json
 notebooks/
 .pytest_cache/
 tests/
