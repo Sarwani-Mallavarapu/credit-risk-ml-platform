@@ -14,10 +14,13 @@ import pandas as pd
 from src.database.connection import execute_query
 
 
-REFERENCE_PROFILE_PATH = (
-    "data/reference_feature_profile.json"
-)
+from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+REFERENCE_PROFILE_PATH = (
+    PROJECT_ROOT / "data" / "reference_feature_profile.json"
+)
 
 FEATURE_MAPPING = {
     "X1": "credit_limit",
