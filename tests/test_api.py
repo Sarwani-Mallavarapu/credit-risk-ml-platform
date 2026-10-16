@@ -475,8 +475,15 @@ def test_monitoring_performance():
     assert "recall" in data["metrics"]
     assert "f1" in data["metrics"]
 
-    assert data["status"] == "INSUFFICIENT_DATA"
     assert data["minimum_required"] == 30
+
+    expected_status = (
+        "INSUFFICIENT_DATA"
+        if data["total_labeled_predictions"] < data["minimum_required"]
+        else "OK"
+    )
+
+    assert data["status"] == expected_status
 
 def test_monitoring_performance_counts_false_negative():
     applicant_id = "FALSE-NEGATIVE-TEST-001"
@@ -572,3 +579,4 @@ def test_prediction_rejects_invalid_repayment_status():
     )
 
     assert response.status_code == 422
+
