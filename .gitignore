@@ -10,3 +10,8 @@ data/processed/*
 models/*.joblib
 
 .env
+# Temporary and build files
+*.log
+*.tmp
+~$*.docx
+~WRL*.tmp
