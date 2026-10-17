@@ -1,13 +1,14 @@
 
 import logging
 import time
+import secrets
 
 import joblib
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from src.config import CONFIG_PATH, MODEL_PATH
+from src.config import API_KEY, CONFIG_PATH, MODEL_PATH
 from src.database.connection import DatabaseError, execute_query
 from src.logging_config import configure_logging
 from src.services.monitoring_service import (
@@ -92,7 +93,20 @@ class BatchApplicantRequest(BaseModel):
 class OutcomeRequest(BaseModel):
     actual_default: bool
 
+# --------------------------------------------------
+# API key authentication
+# --------------------------------------------------
 
+def verify_api_key(
+    x_api_key: str | None = Header(default=None),
+):
+    if not x_api_key or not secrets.compare_digest(
+        x_api_key, API_KEY
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key.",
+        )
 # --------------------------------------------------
 # Risk-band logic
 # --------------------------------------------------
@@ -195,7 +209,10 @@ def predict_batch(batch: BatchApplicantRequest):
 # Retrieve applicant predictions
 # --------------------------------------------------
 
-@app.get("/predictions/{applicant_id}")
+@app.get(
+    "/predictions/{applicant_id}",
+    dependencies=[Depends(verify_api_key)],
+)
 def get_prediction(applicant_id: str):
     query = """
         SELECT
@@ -251,7 +268,10 @@ def get_prediction(applicant_id: str):
 # Update actual outcome
 # --------------------------------------------------
 
-@app.patch("/predictions/{applicant_id}/outcome")
+@app.patch(
+    "/predictions/{applicant_id}/outcome",
+    dependencies=[Depends(verify_api_key)],
+)
 def update_prediction_outcome(
     applicant_id: str,
     outcome: OutcomeRequest,

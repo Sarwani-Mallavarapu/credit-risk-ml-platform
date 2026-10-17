@@ -24,3 +24,14 @@ if not DB_PASSWORD:
     raise RuntimeError(
         "DB_PASSWORD environment variable is not set."
     )
+
+# --------------------------------------------------
+# API authentication
+# --------------------------------------------------
+
+API_KEY = os.getenv("API_KEY")
+
+if not API_KEY:
+    raise RuntimeError(
+        "API_KEY environment variable is not set."
+    )
